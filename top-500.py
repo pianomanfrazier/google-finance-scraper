@@ -1,4 +1,4 @@
-
+import sys
 import urllib2
 import csv
 from bs4 import BeautifulSoup
@@ -42,29 +42,27 @@ def get_csv(ticker):
         print "Error: {}".format(e)
         return None
 
-def append_csv(filename, industry, ticker):
+def append_csv(csvoutput, industry, ticker):
     """append csv to output.csv with industry and ticker columns added"""
     print "Fetching {} in {} ...".format(ticker, industry)
     cr = get_csv(ticker)
-    if cr == None:
+    if cr is None:
         return
-    with open(filename, "a") as csvoutput:
-        cr = get_csv("AAPL")
-        writer = csv.writer(csvoutput, lineterminator="\n")
-        all_rows = []
-        #top_row = next(cr)
-        #top_row.append("TickerSymbol")
-        #top_row.append("Industry")
-        #all_rows.append(top_row)
-        cr.next() #skip the first row
-        for row in cr:
-            row.append(ticker)
-            row.append(industry)
-            all_rows.append(row)
-        writer.writerows(all_rows)
-    print "Appended {} : {} to {}".format(industry, ticker, filename)
+    writer = csv.writer(csvoutput, lineterminator="\n")
+    all_rows = []
+    #top_row = next(cr)
+    #top_row.append("TickerSymbol")
+    #top_row.append("Industry")
+    #all_rows.append(top_row)
+    cr.next() #skip the first row
+    for row in cr:
+        row.append(ticker)
+        row.append(industry)
+        all_rows.append(row)
+    writer.writerows(all_rows)
+    print "Appended {} : {} to {}".format(industry, ticker, sys.argv[1])
 
-def fetch_append_all(filename):
+def fetch_write_to_file(filename):
     """fetches all csv's for the top 500 and appends to output.csv"""
     for industry, tickers in get_tickers(WIKI).iteritems():
         print  "Fetching industry: {}".format(industry)
@@ -72,4 +70,10 @@ def fetch_append_all(filename):
             append_csv(filename, industry, ticker)
 
 if __name__ == "__main__":
-    fetch_append_all("temp/output.csv")
+    if len(sys.argv) < 2:
+        sys.exit("Provide a filename to output csv")
+    try:
+      with open(sys.argv[1], "w") as csvoutput:
+        fetch_write_to_file(csvoutput)
+    except OSError as error:
+      sys.exit("Invalid filename: {}".format(error))
