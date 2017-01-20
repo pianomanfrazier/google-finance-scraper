@@ -44,7 +44,8 @@ def get_csv(industry, ticker):
     filetype = '&output=csv'
 
     url = base + ticker + options + filetype
-    attempt_limit = 20
+    attempt_limit = 30
+    print  "Fetching {} in {} ...".format(industry, ticker)
     for attempt in range(1, attempt_limit+1):
         try:
             logging.debug("fetch attempt %s, %s in %s ...", attempt, ticker, industry)
@@ -55,10 +56,12 @@ def get_csv(industry, ticker):
             logging.debug("Invalid url: %s", url)
             logging.debug("Error: %s", error)
         else:
-            print "Fetch {} in {} successful in {} attempts!".format(ticker, industry, attempt)
+            print "Fetch {} in {} successful!".format(ticker, industry)
+            logging.info("%s in %s fetched in %s attempts", ticker, industry, attempt)
             break
     else:
         logging.debug("Failed all %s attempts to get %s in %s", attempt_limit, ticker, industry)
+        print "Fetch {} in {} failed".format(ticker, industry)
 
 def append_csv(cvs_reader, industry, ticker):
     """append csv to output.csv with industry and ticker columns added"""
@@ -85,7 +88,6 @@ if __name__ == "__main__":
 
     threads = []
     for industry, tickers in get_tickers(WIKI).iteritems():
-        print  "Fetching industry: {}".format(industry)
         for ticker in tickers:
             threads.append(threading.Thread(target=get_csv, args=(industry, ticker,)))
     for thread in threads:
