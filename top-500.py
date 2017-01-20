@@ -50,10 +50,6 @@ def append_csv(csvoutput, industry, ticker):
         return
     writer = csv.writer(csvoutput, lineterminator="\n")
     all_rows = []
-    #top_row = cr.next() 
-    #top_row.append("TickerSymbol")
-    #top_row.append("Industry")
-    #all_rows.append(top_row)
     cr.next() #skip the first row
     for row in cr:
         row.append(ticker)
@@ -74,6 +70,7 @@ if __name__ == "__main__":
         sys.exit("Provide a filename to output csv")
     try:
       with open(sys.argv[1], "w") as csvoutput:
+        csvoutput.write("Date,Open,High,Low,Close,Volume,TickerSymbol,Industry\n")
         fetch_write_to_file(csvoutput)
     except OSError as error:
       sys.exit("Invalid filename: {}".format(error))
