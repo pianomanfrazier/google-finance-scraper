@@ -2,13 +2,21 @@ import sys
 import urllib2
 import csv
 import threading
+import logging
 from bs4 import BeautifulSoup
+
+logging.basicConfig(filename="debug.log",
+                    format='%(levelname)s: %(relativeCreated)6d %(threadName)s - %(message)s',
+                    level=logging.DEBUG)
 
 WIKI = "http://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 lock = threading.Lock()
+status = ""
 
+# taken from http://www.thealgoengineer.com/2014/download_sp500_data/
 def get_tickers(site):
     """return dictionary {industry:[tickers]}"""
+    print "Fetching top 500 tickers from Wikipedia ..."
     hdr = {'User-Agent': 'Mozilla/5.0'}
     req = urllib2.Request(site, headers=hdr)
     page = urllib2.urlopen(req)
@@ -39,18 +47,18 @@ def get_csv(industry, ticker):
     attempt_limit = 20
     for attempt in range(1, attempt_limit+1):
         try:
-            print "Fetch attempt {}, {} in {} ...".format(attempt, ticker, industry)
+            logging.debug("fetch attempt %s, %s in %s ...", attempt, ticker, industry)
             stock_data = urllib2.urlopen(url)
             cvs_reader = csv.reader(stock_data)
             append_csv(cvs_reader, industry, ticker)
         except Exception as error:
-            print "Invalid url: {}".format(url)
-            print "Error: {}".format(error)
+            logging.debug("Invalid url: %s", url)
+            logging.debug("Error: %s", error)
         else:
             print "Fetch {} in {} successful in {} attempts!".format(ticker, industry, attempt)
             break
     else:
-        print "Failed all {} attempts to get {} in {}".format(attempt_limit, ticker, industry)
+        logging.debug("Failed all %s attempts to get %s in %s", attempt_limit, ticker, industry)
 
 def append_csv(cvs_reader, industry, ticker):
     """append csv to output.csv with industry and ticker columns added"""
@@ -67,7 +75,7 @@ def append_csv(cvs_reader, industry, ticker):
                 row.append(industry)
                 all_rows.append(row)
             writer.writerows(all_rows)
-            print "Appended {} : {} to {}".format(industry, ticker, sys.argv[1])
+            logging.info("Appended %s : %s to %s", industry, ticker, sys.argv[1])
     finally:
         lock.release()
 
