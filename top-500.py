@@ -37,9 +37,9 @@ def get_csv(ticker):
     try:
         stock_data = urllib2.urlopen(url)
         return csv.reader(stock_data)
-    except Exception as e:
+    except Exception as error:
         print "Invalid url: {}".format(url)
-        print "Error: {}".format(e)
+        print "Error: {}".format(error)
         return None
 
 def append_csv(csvoutput, industry, ticker):
@@ -50,7 +50,7 @@ def append_csv(csvoutput, industry, ticker):
         return
     writer = csv.writer(csvoutput, lineterminator="\n")
     all_rows = []
-    #top_row = next(cr)
+    #top_row = cr.next() 
     #top_row.append("TickerSymbol")
     #top_row.append("Industry")
     #all_rows.append(top_row)
@@ -63,7 +63,7 @@ def append_csv(csvoutput, industry, ticker):
     print "Appended {} : {} to {}".format(industry, ticker, sys.argv[1])
 
 def fetch_write_to_file(filename):
-    """fetches all csv's for the top 500 and appends to output.csv"""
+    """fetches all csv's for the top 500 and appends to argv[1]"""
     for industry, tickers in get_tickers(WIKI).iteritems():
         print  "Fetching industry: {}".format(industry)
         for ticker in tickers:
