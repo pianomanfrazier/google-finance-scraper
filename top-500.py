@@ -1,9 +1,11 @@
 import sys
 import urllib2
 import csv
+import threading
 from bs4 import BeautifulSoup
 
 WIKI = "http://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+lock = threading.Lock()
 
 def get_tickers(site):
     """return dictionary {industry:[tickers]}"""
@@ -24,7 +26,7 @@ def get_tickers(site):
             sector_tickers[sector].append(ticker)
     return sector_tickers
 
-def get_csv(ticker):
+def get_csv(industry, ticker):
     """
     get a csv from google finance for the ticker
     returns a csv reader object
@@ -34,43 +36,51 @@ def get_csv(ticker):
     filetype = '&output=csv'
 
     url = base + ticker + options + filetype
-    try:
-        stock_data = urllib2.urlopen(url)
-        return csv.reader(stock_data)
-    except Exception as error:
-        print "Invalid url: {}".format(url)
-        print "Error: {}".format(error)
-        return None
+    attempt_limit = 20
+    for attempt in range(1, attempt_limit+1):
+        try:
+            print "Fetch attempt {}, {} in {} ...".format(attempt, ticker, industry)
+            stock_data = urllib2.urlopen(url)
+            cvs_reader = csv.reader(stock_data)
+            append_csv(cvs_reader, industry, ticker)
+        except Exception as error:
+            print "Invalid url: {}".format(url)
+            print "Error: {}".format(error)
+        else:
+            print "Fetch {} in {} successful in {} attempts!".format(ticker, industry, attempt)
+            break
+    else:
+        print "Failed all {} attempts to get {} in {}".format(attempt_limit, ticker, industry)
 
-def append_csv(csvoutput, industry, ticker):
+def append_csv(cvs_reader, industry, ticker):
     """append csv to output.csv with industry and ticker columns added"""
-    print "Fetching {} in {} ...".format(ticker, industry)
-    cr = get_csv(ticker)
-    if cr is None:
+    if cvs_reader is None:
         return
-    writer = csv.writer(csvoutput, lineterminator="\n")
-    all_rows = []
-    cr.next() #skip the first row
-    for row in cr:
-        row.append(ticker)
-        row.append(industry)
-        all_rows.append(row)
-    writer.writerows(all_rows)
-    print "Appended {} : {} to {}".format(industry, ticker, sys.argv[1])
-
-def fetch_write_to_file(filename):
-    """fetches all csv's for the top 500 and appends to argv[1]"""
-    for industry, tickers in get_tickers(WIKI).iteritems():
-        print  "Fetching industry: {}".format(industry)
-        for ticker in tickers:
-            append_csv(filename, industry, ticker)
+    lock.acquire()
+    try:
+        with open(sys.argv[1], "a") as fout:
+            writer = csv.writer(fout, lineterminator="\n")
+            all_rows = []
+            cvs_reader.next() #skip the first row
+            for row in cvs_reader:
+                row.append(ticker)
+                row.append(industry)
+                all_rows.append(row)
+            writer.writerows(all_rows)
+            print "Appended {} : {} to {}".format(industry, ticker, sys.argv[1])
+    finally:
+        lock.release()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit("Provide a filename to output csv")
-    try:
-      with open(sys.argv[1], "w") as csvoutput:
-        csvoutput.write("Date,Open,High,Low,Close,Volume,TickerSymbol,Industry\n")
-        fetch_write_to_file(csvoutput)
-    except OSError as error:
-      sys.exit("Invalid filename: {}".format(error))
+
+    threads = []
+    for industry, tickers in get_tickers(WIKI).iteritems():
+        print  "Fetching industry: {}".format(industry)
+        for ticker in tickers:
+            threads.append(threading.Thread(target=get_csv, args=(industry, ticker,)))
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
