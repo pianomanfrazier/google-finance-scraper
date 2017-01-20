@@ -1,4 +1,4 @@
-import urllib2
+import urllib
 import csv
 import os
 import shutil
